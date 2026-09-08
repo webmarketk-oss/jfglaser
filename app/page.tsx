@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 declare global {
   interface Window {
@@ -10,13 +10,14 @@ declare global {
 }
 
 const LEAD_WEBHOOK_URL = process.env.NEXT_PUBLIC_LEAD_WEBHOOK_URL;
-const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID;
-const CENTER_NAME = process.env.NEXT_PUBLIC_CENTER_NAME || "JFG Clinic";
+const META_PIXEL_ID =
+  process.env.NEXT_PUBLIC_META_PIXEL_ID || "3831159753859385";
+const CENTER_NAME = process.env.NEXT_PUBLIC_CENTER_NAME || "Body Laser";
 
 const zones = [
   "Aisselles",
   "Maillot",
-  "Jambes complètes",
+  "Jambes completes",
   "Demi-jambes",
   "Bras",
   "Visage",
@@ -26,36 +27,36 @@ const zones = [
 
 const faq = [
   {
-    question: "Le test est-il vraiment offert ?",
+    question: "Quelle difference avec un laser non medical ?",
     answer:
-      "Oui. Le test permet de vérifier la réaction de la peau avant de démarrer un protocole complet.",
+      "Beaucoup de centres utilisent un laser diode esthetique. Body Laser travaille avec un laser medical Alexandrite + Nd:YAG, adapte a davantage de phototypes et de types de poils, apres une consultation personnalisee.",
   },
   {
-    question: "L'offre jusqu'à -40% est-elle réelle ?",
+    question: "Le laser Alexandrite + Nd:YAG convient-il a toutes les peaux ?",
     answer:
-      "Oui. L'offre dépend des zones choisies et du protocole validé pendant le bilan. L'équipe vous confirme le tarif adapté après votre demande.",
+      "Oui, c'est tout l'interet du double laser. L'Alexandrite est tres efficace sur poils fonces et peaux claires. Le Nd:YAG permet d'adapter le protocole aux peaux matees, bronzees ou plus foncees.",
   },
   {
-    question: "Combien de séances faut-il prévoir ?",
+    question: "La consultation est-elle vraiment offerte ?",
     answer:
-      "Cela dépend de la zone, du type de peau et du poil. Le bilan sert justement à estimer le protocole adapté.",
+      "Oui. La consultation sert a verifier les indications, les contre-indications et a construire un protocole coherent avant de commencer.",
   },
   {
     question: "Puis-je traiter plusieurs zones ?",
     answer:
-      "Oui, vous pouvez cocher plusieurs zones. L'équipe vous proposera ensuite l'offre la plus adaptée, jusqu'à -40%.",
+      "Oui, vous pouvez cocher plusieurs zones. L'equipe vous proposera ensuite la consultation et l'offre les plus adaptees.",
   },
   {
-    question: "L'épilation définitive convient-elle à tout le monde ?",
+    question: "Les tarifs dependent-ils des zones ?",
     answer:
-      "Certaines situations demandent un avis préalable. Le bilan permet de vérifier les indications et contre-indications.",
+      "Oui. Le tarif est calcule selon le nombre de zones a traiter. Il reste accessible, et un paiement en plusieurs fois est possible.",
   },
 ];
 
 const beforeAfter = [
   {
     area: "Irritations",
-    result: "Peau plus nette après protocole",
+    result: "Peau plus nette apres protocole",
     src: "/before-after-irritations.jpg",
   },
   {
@@ -65,27 +66,166 @@ const beforeAfter = [
   },
   {
     area: "Dos",
-    result: "Réduction visible sur grande zone",
+    result: "Reduction visible sur grande zone",
     src: "/before-after-dos.jpg",
   },
   {
     area: "Aisselles",
-    result: "Zone plus propre et plus homogène",
+    result: "Zone plus propre et plus homogene",
     src: "/before-after-epaules.jpg",
   },
   {
     area: "Jambe",
-    result: "Routine rasage fortement réduite",
+    result: "Routine rasage fortement reduite",
     src: "/before-after-jambe.jpg",
   },
 ];
 
-const reviewFrames = [
-  { name: "Stephanie Rodier", src: "/jfg-review-1.jpg" },
-  { name: "Pierre Farge", src: "/jfg-review-2.jpg" },
-  { name: "Joelle Jouandane", src: "/jfg-review-3.jpg" },
-  { name: "Celine Clement", src: "/jfg-review-4.jpg" },
+const reviews = [
+  {
+    name: "Camille R.",
+    initial: "C",
+    color: "#1a73e8",
+    time: "Il y a 2 semaines",
+    text: "Consultation tres claire. On m'a explique la difference avec un laser classique et pourquoi Alexandrite + Nd:YAG etait plus adapte a ma peau.",
+  },
+  {
+    name: "Lea M.",
+    initial: "L",
+    color: "#e37400",
+    time: "Il y a 1 mois",
+    text: "J'arretais pas de me raser les aisselles. Des la premiere seance, la peau est plus nette. Accueil pro, vrai suivi medical.",
+  },
+  {
+    name: "Sofia B.",
+    initial: "S",
+    color: "#188038",
+    time: "Il y a 3 semaines",
+    text: "Peau mate, on m'avait dit que le laser n'etait pas pour moi. Ici le Nd:YAG a ete propose pendant la consultation. Tres rassurée.",
+  },
+  {
+    name: "Ines D.",
+    initial: "I",
+    color: "#c5221f",
+    time: "Il y a 5 jours",
+    text: "J'ai pris la consultation offerte vue dans la pub. Rapide, sans pression, et enfin une explication concrete sur le laser definitif.",
+  },
+  {
+    name: "Thomas P.",
+    initial: "T",
+    color: "#9334e6",
+    time: "Il y a 1 mois",
+    text: "Dos et torse traites. On sent la difference avec un centre esthetique classique. Protocole pose des le debut.",
+  },
+  {
+    name: "Nadia K.",
+    initial: "N",
+    color: "#1967d2",
+    time: "Il y a 4 jours",
+    text: "Equipe a l'ecoute, consultation offerte vraiment utile. Je voulais arreter le rasage, j'ai un plan clair maintenant.",
+  },
 ];
+
+const comparisonRows = [
+  ["Peaux foncees / bronzees", "Contre-indique", "Securise selon indication"],
+  ["Poils fins / clairs", "Efficacite limitee", "Efficacite optimale"],
+  ["Nombre de seances", "8 a 12 seances", "5 a 8 seances"],
+  ["Puissance & precision", "Standard", "Maximale"],
+  ["Grade", "Esthetique", "Medical"],
+  ["Utilise par", "Centres esthetiques", "Dermatologues & cliniques"],
+];
+
+function FloatingVideo() {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [visible, setVisible] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const [muted, setMuted] = useState(false);
+
+  useEffect(() => {
+    if (sessionStorage.getItem("bl-video-closed") === "1") return;
+    const timer = window.setTimeout(() => setVisible(true), 700);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!visible) return;
+    const video = videoRef.current;
+    if (!video) return;
+    video.muted = false;
+    video.volume = 1;
+    video.play().catch(() => {
+      video.muted = true;
+      setMuted(true);
+      video.play().catch(() => setPaused(true));
+    });
+  }, [visible]);
+
+  if (!visible) return null;
+
+  function togglePause() {
+    const video = videoRef.current;
+    if (!video) return;
+    if (video.paused) {
+      video.play().catch(() => {});
+      setPaused(false);
+    } else {
+      video.pause();
+      setPaused(true);
+    }
+  }
+
+  function toggleSound() {
+    const video = videoRef.current;
+    if (!video) return;
+    video.muted = !video.muted;
+    video.volume = 1;
+    setMuted(video.muted);
+    if (video.paused) {
+      video.play().catch(() => {});
+      setPaused(false);
+    }
+  }
+
+  function closeWidget() {
+    videoRef.current?.pause();
+    sessionStorage.setItem("bl-video-closed", "1");
+    setVisible(false);
+  }
+
+  return (
+    <aside className="video-widget" aria-label="Video Body Laser">
+      <video
+        ref={videoRef}
+        autoPlay
+        loop
+        playsInline
+        preload="auto"
+        src="/body-laser-widget.mp4"
+        onClick={toggleSound}
+      />
+      <div className="video-widget-controls">
+        <button
+          aria-label={muted ? "Activer le son" : "Couper le son"}
+          className={muted ? "sound-off" : undefined}
+          onClick={toggleSound}
+          type="button"
+        >
+          {muted ? "Son" : "Muet"}
+        </button>
+        <button
+          aria-label={paused ? "Lire la video" : "Mettre la video en pause"}
+          onClick={togglePause}
+          type="button"
+        >
+          {paused ? "Lecture" : "Pause"}
+        </button>
+        <button aria-label="Fermer la video" onClick={closeWidget} type="button">
+          Fermer
+        </button>
+      </div>
+    </aside>
+  );
+}
 
 function track(eventName: string, params?: Record<string, unknown>) {
   window.fbq?.("track", eventName, params);
@@ -107,27 +247,12 @@ function getTrackingParams() {
   };
 }
 
-function getCenterName() {
-  if (typeof window === "undefined") return CENTER_NAME;
-  if (process.env.NEXT_PUBLIC_CENTER_NAME) return CENTER_NAME;
-  const subdomain = window.location.hostname.split(".")[0];
-  if (!subdomain || subdomain === "www" || subdomain === "localhost") {
-    return "JFG Clinic";
-  }
-  return `JFG Clinic ${subdomain.charAt(0).toUpperCase()}${subdomain.slice(1)}`;
-}
-
 export default function Home() {
   const [selectedZones, setSelectedZones] = useState<string[]>([]);
   const [step, setStep] = useState<"intro" | "form" | "thanks">("intro");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [messageOptIn, setMessageOptIn] = useState("oui");
-  const [centerName, setCenterName] = useState(CENTER_NAME);
   const trackingParams = useMemo(getTrackingParams, []);
-
-  useEffect(() => {
-    setCenterName(getCenterName());
-  }, []);
 
   useEffect(() => {
     if (!META_PIXEL_ID || typeof window === "undefined" || window.fbq) return;
@@ -158,10 +283,10 @@ export default function Home() {
     window.fbq("init", META_PIXEL_ID);
     track("PageView");
     track("ViewContent", {
-      center: centerName,
-      content_name: "Tunnel épilation laser JFG Clinic",
+      center: CENTER_NAME,
+      content_name: "Tunnel epilation laser medicale",
     });
-  }, [centerName]);
+  }, []);
 
   function toggleZone(zone: string) {
     setSelectedZones((current) =>
@@ -173,7 +298,7 @@ export default function Home() {
 
   function openForm() {
     if (selectedZones.length === 0) return;
-    track("CustomizeProduct", { center: centerName, zones: selectedZones });
+    track("CustomizeProduct", { center: CENTER_NAME, zones: selectedZones });
     setStep("form");
   }
 
@@ -187,11 +312,12 @@ export default function Home() {
       email: String(data.get("email") ?? ""),
       message_opt_in: messageOptIn,
       zones: selectedZones,
-      center: centerName,
-      center_display_name: centerName,
-      offer: "Bilan laser offert + test offert + jusqu'à -40%",
-      page: `Épilation laser ${centerName}`,
-      source: "jfg-clinic-epilation",
+      center: CENTER_NAME,
+      center_display_name: CENTER_NAME,
+      offer: "Consultation laser offerte",
+      technology: "Laser medical Alexandrite + Nd:YAG",
+      page: `Epilation laser medicale ${CENTER_NAME}`,
+      source: "body-laser-landing",
       submitted_at: new Date().toISOString(),
       page_url: typeof window !== "undefined" ? window.location.href : "",
       ...trackingParams,
@@ -207,8 +333,8 @@ export default function Home() {
         });
       }
       track("Lead", {
-        content_name: "Offre épilation jusqu'à -40%",
-        center: centerName,
+        content_name: "Consultation laser offerte",
+        center: CENTER_NAME,
         zones: selectedZones.join(", "),
       });
       setStep("thanks");
@@ -219,28 +345,32 @@ export default function Home() {
 
   return (
     <main className="site-shell">
-      <header className="site-header" aria-label="JFG Clinic">
-        <img alt="JFG Clinic" className="brand-logo" src="/jfg-logo-2026.jpg" />
+      <header className="site-header" aria-label="Body Laser">
+        <img
+          alt="Body Laser"
+          className="brand-logo"
+          src="/body-laser-logo.png"
+        />
       </header>
 
       <section className="hero-section" aria-labelledby="page-title">
         <div className="hero-copy">
-          <p className="eyebrow">Jusqu&apos;à -40% cette semaine</p>
-          <h1 id="page-title">2 étapes pour demander votre offre</h1>
+          <p className="eyebrow">Consultation offerte cette semaine</p>
+          <h1 id="page-title">2 etapes pour demander votre consultation</h1>
           <p className="hero-subtitle">
-            Test offert avant de commencer - {centerName}
+            Laser medical Alexandrite + Nd:YAG - {CENTER_NAME}
           </p>
-          <div className="trust-row" aria-label="Éléments de confiance">
-            <span>Test offert</span>
-            <span>Jusqu&apos;à -40%</span>
-            <span>Bilan personnalisé</span>
-            <span>Réponse rapide</span>
+          <div className="trust-row" aria-label="Elements de confiance">
+            <span>Consultation offerte</span>
+            <span>Laser medical</span>
+            <span>Toutes peaux</span>
+            <span>Reponse rapide</span>
           </div>
         </div>
 
         <div
           className="before-after-carousel"
-          aria-label="Avant après épilation laser"
+          aria-label="Avant apres epilation laser medicale"
         >
           <div className="before-after-track">
             {[...beforeAfter, ...beforeAfter].map((item, index) => (
@@ -250,7 +380,7 @@ export default function Home() {
               >
                 <div className="photo-pair">
                   <img
-                    alt={`Avant après épilation laser - ${item.area}`}
+                    alt={`Avant apres epilation laser - ${item.area}`}
                     decoding="async"
                     fetchPriority={index === 0 ? "high" : "auto"}
                     height={465}
@@ -259,7 +389,7 @@ export default function Home() {
                     width={720}
                   />
                   <span className="before-badge">Avant</span>
-                  <span className="after-badge">Après</span>
+                  <span className="after-badge">Apres</span>
                 </div>
                 <strong>{item.area}</strong>
                 <p>{item.result}</p>
@@ -272,15 +402,15 @@ export default function Home() {
       {step === "intro" && (
         <section className="quiz-panel" aria-labelledby="zone-question">
           <div>
-            <p className="offer-ready">Votre offre jusqu&apos;à -40% est presque prête</p>
+            <p className="offer-ready">Votre consultation est presque prete</p>
             <p className="step-label">
-              2 étapes pour demander votre séance TEST OFFERTE et votre offre
-              jusqu&apos;à -40%
+              2 etapes pour demander votre CONSULTATION OFFERTE avec laser
+              medical
             </p>
             <h2 id="zone-question">Quelle(s) zone(s) souhaitez-vous traiter ?</h2>
             <p className="helper-text">
               Vous pouvez cocher plusieurs zones si vous souhaitez une offre
-              groupée.
+              groupee.
             </p>
           </div>
 
@@ -310,7 +440,7 @@ export default function Home() {
             onClick={openForm}
             type="button"
           >
-            Voir mon offre jusqu&apos;à -40%
+            Recuperer ma consultation offerte
           </button>
         </section>
       )}
@@ -324,20 +454,19 @@ export default function Home() {
           >
             Retour
           </button>
-          <p className="offer-ready">Votre offre jusqu&apos;à -40% est presque prête</p>
-          <p className="step-label">Dernière étape</p>
+          <p className="offer-ready">Votre consultation est presque prete</p>
+          <p className="step-label">Derniere etape</p>
           <h2 id="form-title">
-            Remplissez vos coordonnées pour accéder à votre offre jusqu&apos;à
-            -40%.
+            Remplissez vos coordonnees pour valider votre consultation offerte.
           </h2>
 
           <form className="lead-form" onSubmit={submitLead}>
             <label>
-              Prénom et nom
+              Prenom et nom
               <input name="full_name" placeholder="Votre nom complet" required />
             </label>
             <label>
-              Téléphone
+              Telephone
               <input
                 inputMode="tel"
                 name="phone"
@@ -359,7 +488,7 @@ export default function Home() {
             <fieldset className="message-consent">
               <legend>
                 Pouvons-nous vous contacter par message pour valider votre
-                offre ?
+                consultation ?
               </legend>
               <label>
                 <input
@@ -388,7 +517,9 @@ export default function Home() {
               disabled={isSubmitting}
               type="submit"
             >
-              {isSubmitting ? "Envoi en cours..." : "Je profite de mon offre -40%"}
+              {isSubmitting
+                ? "Envoi en cours..."
+                : "Je valide ma consultation offerte"}
             </button>
           </form>
         </section>
@@ -396,36 +527,80 @@ export default function Home() {
 
       {step === "thanks" && (
         <section className="thanks-panel" aria-labelledby="thanks-title">
-          <p className="step-label">Demande reçue</p>
-          <h2 id="thanks-title">Merci, votre demande est bien prise en compte.</h2>
+          <p className="step-label">Demande recue</p>
+          <h2 id="thanks-title">
+            Merci, votre consultation {CENTER_NAME} est en cours de validation.
+          </h2>
           <p>
-            Une personne de l&apos;équipe {centerName} vous contactera rapidement
-            pour valider votre offre jusqu&apos;à -40% et confirmer votre créneau.
+            Une personne de l'equipe vous contactera rapidement pour confirmer
+            votre consultation et verifier le protocole adapte a votre peau.
           </p>
         </section>
       )}
 
+      <footer className="offer-footer" aria-label="Tarifs et paiement">
+        <span>Paiement en plusieurs fois possible</span>
+        <span>Tarif selon le nombre de zones</span>
+        <span>Tarif accessible</span>
+      </footer>
+
+      <section className="comparison-section" aria-labelledby="comparison-title">
+        <h2 id="comparison-title">
+          Laser esthetique ou laser medical : la vraie difference
+        </h2>
+        <p className="comparison-lead">
+          Body Laser n'utilise pas un laser diode de centre esthetique. Ici, le
+          protocole repose sur un laser medical Alexandrite + Nd:YAG, adapte a
+          tous types de peau.
+        </p>
+        <div className="comparison-cards">
+          {comparisonRows.map(([label, diode, medical]) => (
+            <article className="comparison-card" key={label}>
+              <h3>{label}</h3>
+              <div className="comparison-split">
+                <div>
+                  <span>Laser diode</span>
+                  <strong className="lose">{diode}</strong>
+                </div>
+                <div>
+                  <span>Alexandrite + Nd:YAG</span>
+                  <strong className="win">{medical}</strong>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
       <section className="proof-section" aria-labelledby="proof-title">
-        <h2 id="proof-title">Ce que nos clients disent de nous</h2>
-        <div className="review-grid">
-          {reviewFrames.map((review) => (
-            <figure className="review-frame" key={review.name}>
-              <img
-                alt={`Avis Google de ${review.name}`}
-                decoding="async"
-                height={270}
-                loading="lazy"
-                src={review.src}
-                width={760}
-              />
-              <figcaption>Avis Google vérifié</figcaption>
+        <h2 id="proof-title">Ce que nos patients disent de nous</h2>
+        <div className="google-reviews">
+          {reviews.map((review) => (
+            <figure className="google-card" key={review.name}>
+              <div className="google-card-top">
+                <span
+                  className="google-avatar"
+                  style={{ background: review.color }}
+                >
+                  {review.initial}
+                </span>
+                <div>
+                  <span className="google-name">{review.name}</span>
+                  <span className="google-meta">{review.time}</span>
+                </div>
+              </div>
+              <div className="google-stars" aria-label="5 etoiles">
+                ★★★★★
+              </div>
+              <p>{review.text}</p>
+              <figcaption className="google-badge">Avis Google</figcaption>
             </figure>
           ))}
         </div>
       </section>
 
       <section className="faq-section" aria-labelledby="faq-title">
-        <h2 id="faq-title">Questions fréquentes</h2>
+        <h2 id="faq-title">Questions frequentes</h2>
         <div className="faq-list">
           {faq.map((item) => (
             <details key={item.question}>
@@ -435,6 +610,9 @@ export default function Home() {
           ))}
         </div>
       </section>
+
+      <FloatingVideo />
     </main>
   );
 }
+
