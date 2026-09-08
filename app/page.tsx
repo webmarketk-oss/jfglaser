@@ -1,17 +1,18 @@
-Sur GitHub, ouvre app/page.tsx → tout sélectionner → colle ça → Commit.
-
-
 "use client";
+
 import { FormEvent, useEffect, useMemo, useState } from "react";
+
 declare global {
   interface Window {
     fbq?: (...args: unknown[]) => void;
     _fbq?: unknown;
   }
 }
+
 const LEAD_WEBHOOK_URL = process.env.NEXT_PUBLIC_LEAD_WEBHOOK_URL;
 const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID;
 const CENTER_NAME = process.env.NEXT_PUBLIC_CENTER_NAME || "JFG Clinic";
+
 const zones = [
   "Aisselles",
   "Maillot",
@@ -22,6 +23,7 @@ const zones = [
   "Dos / torse",
   "Plusieurs zones",
 ];
+
 const faq = [
   {
     question: "Le test est-il vraiment offert ?",
@@ -49,6 +51,7 @@ const faq = [
       "Certaines situations demandent un avis préalable. Le bilan permet de vérifier les indications et contre-indications.",
   },
 ];
+
 const beforeAfter = [
   {
     area: "Irritations",
@@ -76,15 +79,18 @@ const beforeAfter = [
     src: "/before-after-jambe.jpg",
   },
 ];
+
 const reviewFrames = [
   { name: "Stéphanie Rodier", src: "/jfg-review-1.jpg" },
   { name: "Pierre Farge", src: "/jfg-review-2.jpg" },
   { name: "Joëlle Jouandane", src: "/jfg-review-3.jpg" },
   { name: "Céline Clément", src: "/jfg-review-4.jpg" },
 ];
+
 function track(eventName: string, params?: Record<string, unknown>) {
   window.fbq?.("track", eventName, params);
 }
+
 function getTrackingParams() {
   if (typeof window === "undefined") return {};
   const params = new URLSearchParams(window.location.search);
@@ -100,14 +106,17 @@ function getTrackingParams() {
     meta_ad_id: params.get("ad_id") ?? "",
   };
 }
+
 export default function Home() {
   const [selectedZones, setSelectedZones] = useState<string[]>([]);
   const [step, setStep] = useState<"intro" | "form" | "thanks">("intro");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [messageOptIn, setMessageOptIn] = useState("oui");
   const trackingParams = useMemo(getTrackingParams, []);
+
   useEffect(() => {
     if (!META_PIXEL_ID || typeof window === "undefined" || window.fbq) return;
+
     const fbq = function (...args: unknown[]) {
       (
         fbq as unknown as {
@@ -120,11 +129,13 @@ export default function Home() {
           ).callMethod(...args)
         : (fbq as unknown as { queue: unknown[] }).queue.push(args);
     } as Window["fbq"] & { queue: unknown[]; loaded: boolean; version: string };
+
     fbq.queue = [];
     fbq.loaded = true;
     fbq.version = "2.0";
     window.fbq = fbq;
     window._fbq = fbq;
+
     const script = document.createElement("script");
     script.async = true;
     script.src = "https://connect.facebook.net/en_US/fbevents.js";
@@ -136,6 +147,7 @@ export default function Home() {
       content_name: "Tunnel épilation laser JFG Clinic",
     });
   }, []);
+
   function toggleZone(zone: string) {
     setSelectedZones((current) =>
       current.includes(zone)
@@ -143,11 +155,13 @@ export default function Home() {
         : [...current, zone],
     );
   }
+
   function openForm() {
     if (selectedZones.length === 0) return;
     track("CustomizeProduct", { center: CENTER_NAME, zones: selectedZones });
     setStep("form");
   }
+
   async function submitLead(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
@@ -167,6 +181,7 @@ export default function Home() {
       page_url: typeof window !== "undefined" ? window.location.href : "",
       ...trackingParams,
     };
+
     setIsSubmitting(true);
     try {
       if (LEAD_WEBHOOK_URL) {
@@ -186,11 +201,13 @@ export default function Home() {
       setIsSubmitting(false);
     }
   }
+
   return (
     <main className="site-shell">
       <header className="site-header" aria-label="JFG Clinic">
         <img alt="JFG Clinic" className="brand-logo" src="/jfg-logo-2026.jpg" />
       </header>
+
       <section className="hero-section" aria-labelledby="page-title">
         <div className="hero-copy">
           <p className="eyebrow">
@@ -206,6 +223,7 @@ export default function Home() {
             <span>Réponse rapide</span>
           </div>
         </div>
+
         <div
           className="before-after-carousel"
           aria-label="Avant après épilation laser"
@@ -236,6 +254,7 @@ export default function Home() {
           </div>
         </div>
       </section>
+
       {step === "intro" && (
         <section className="quiz-panel" aria-labelledby="zone-question">
           <div>
@@ -250,6 +269,7 @@ export default function Home() {
               groupée.
             </p>
           </div>
+
           <div className="zone-grid">
             {zones.map((zone) => {
               const isSelected = selectedZones.includes(zone);
@@ -269,6 +289,7 @@ export default function Home() {
               );
             })}
           </div>
+
           <button
             className="primary-action"
             disabled={selectedZones.length === 0}
@@ -279,6 +300,7 @@ export default function Home() {
           </button>
         </section>
       )}
+
       {step === "form" && (
         <section className="form-panel" aria-labelledby="form-title">
           <button
@@ -294,6 +316,7 @@ export default function Home() {
             Remplissez vos coordonnées pour accéder à votre offre jusqu&apos;à
             -40%.
           </h2>
+
           <form className="lead-form" onSubmit={submitLead}>
             <label>
               Prénom et nom
@@ -318,6 +341,7 @@ export default function Home() {
                 type="email"
               />
             </label>
+
             <fieldset className="message-consent">
               <legend>
                 Pouvons-nous vous contacter par message pour valider votre
@@ -344,6 +368,7 @@ export default function Home() {
                 Non
               </label>
             </fieldset>
+
             <button
               className="primary-action"
               disabled={isSubmitting}
@@ -354,6 +379,7 @@ export default function Home() {
           </form>
         </section>
       )}
+
       {step === "thanks" && (
         <section className="thanks-panel" aria-labelledby="thanks-title">
           <p className="step-label">Demande reçue</p>
@@ -365,6 +391,7 @@ export default function Home() {
           </p>
         </section>
       )}
+
       <section className="proof-section" aria-labelledby="proof-title">
         <h2 id="proof-title">Ce que nos clients disent de nous</h2>
         <div className="review-grid">
@@ -383,6 +410,7 @@ export default function Home() {
           ))}
         </div>
       </section>
+
       <section className="faq-section" aria-labelledby="faq-title">
         <h2 id="faq-title">Questions fréquentes</h2>
         <div className="faq-list">
