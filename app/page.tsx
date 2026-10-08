@@ -107,12 +107,21 @@ function getTrackingParams() {
   };
 }
 
+function getCenterName() {
+  return CENTER_NAME;
+}
+
 export default function Home() {
   const [selectedZones, setSelectedZones] = useState<string[]>([]);
   const [step, setStep] = useState<"intro" | "form" | "thanks">("intro");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [messageOptIn, setMessageOptIn] = useState("oui");
+  const [centerName, setCenterName] = useState(CENTER_NAME);
   const trackingParams = useMemo(getTrackingParams, []);
+
+  useEffect(() => {
+    setCenterName(getCenterName());
+  }, []);
 
   useEffect(() => {
     if (!META_PIXEL_ID || typeof window === "undefined" || window.fbq) return;
@@ -143,10 +152,10 @@ export default function Home() {
     window.fbq("init", META_PIXEL_ID);
     track("PageView");
     track("ViewContent", {
-      center: CENTER_NAME,
+      center: centerName,
       content_name: "Tunnel épilation laser JFG Clinic",
     });
-  }, []);
+  }, [centerName]);
 
   function toggleZone(zone: string) {
     setSelectedZones((current) =>
@@ -158,7 +167,7 @@ export default function Home() {
 
   function openForm() {
     if (selectedZones.length === 0) return;
-    track("CustomizeProduct", { center: CENTER_NAME, zones: selectedZones });
+    track("CustomizeProduct", { center: centerName, zones: selectedZones });
     setStep("form");
   }
 
@@ -172,10 +181,10 @@ export default function Home() {
       email: String(data.get("email") ?? ""),
       message_opt_in: messageOptIn,
       zones: selectedZones,
-      center: CENTER_NAME,
-      center_display_name: "JFG Clinic La Ferté-Bernard",
+      center: centerName,
+      center_display_name: centerName,
       offer: "Bilan laser offert + test offert + jusqu'à -40%",
-      page: "Épilation laser JFG Clinic La Ferté-Bernard",
+      page: `Épilation laser ${centerName}`,
       source: "jfg-clinic-epilation",
       submitted_at: new Date().toISOString(),
       page_url: typeof window !== "undefined" ? window.location.href : "",
@@ -191,9 +200,33 @@ export default function Home() {
           body: JSON.stringify(payload),
         });
       }
+
+      const nameParts = payload.full_name.trim().split(/\s+/).filter(Boolean);
+      const prenom = nameParts[0] ?? "";
+      const nom = nameParts.slice(1).join(" ");
+      try {
+        await fetch(
+          "https://www.bookeai.fr/api/leads?center=jfg-clinic-la-ferte-bernard&source=landing",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              first_name: prenom,
+              last_name: nom,
+              email: payload.email,
+              phone: payload.phone,
+              offre: "Épilation laser La Ferté-Bernard",
+              commentaire: `Zones à traiter : ${selectedZones.join(", ") || "non précisé"}`,
+            }),
+          },
+        );
+      } catch {
+        // Bookea ne doit pas bloquer la demande LFB.
+      }
+
       track("Lead", {
         content_name: "Offre épilation jusqu'à -40%",
-        center: CENTER_NAME,
+        center: centerName,
         zones: selectedZones.join(", "),
       });
       setStep("thanks");
@@ -316,6 +349,9 @@ export default function Home() {
             Remplissez vos coordonnées pour accéder à votre offre jusqu&apos;à
             -40%.
           </h2>
+          <p className="helper-text">
+            Zone(s) à traiter : {selectedZones.join(", ")}
+          </p>
 
           <form className="lead-form" onSubmit={submitLead}>
             <label>
